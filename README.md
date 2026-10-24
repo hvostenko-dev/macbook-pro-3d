@@ -1,16 +1,46 @@
-# React + Vite
+# 💻 Apple MacBook Pro Showcase (3D & WebGL)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive, high-fidelity clone of Apple's MacBook Pro product experience. Built with React, Three.js, and GSAP, this project features realistic 3D laptop interactions, dynamic lid opening/closing mechanisms, responsive screen textures, and scroll-driven cinematic storytelling.
 
-Currently, two official plugins are available:
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Three.js](https://img.shields.io/badge/Three.js-000000?style=for-the-badge&logo=three.js&logoColor=white)
+![GSAP](https://img.shields.io/badge/GSAP-88CE02?style=for-the-badge&logo=greensock&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🎯 Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Interactive 3D MacBook Model:** Realistic rendering of materials (aluminum body, glass display, backlit keyboard) powered by Three.js and React Three Fiber.
+- **Scroll-Controlled Lid Mechanism:** Kinematic hinge animations mapped directly to page scroll positions or interactive slider inputs.
+- **Interactive Screen Content:** Embedded interactive HTML/canvas views rendered seamlessly onto the 3D laptop display using `@react-three/drei` primitives.
+- **Color & Size Customization:** Real-time switching between chassis finishes (Space Black, Silver) and screen dimensions.
+- **Cinematic Camera Choreography:** Smooth GSAP camera tracks synchronized with storytelling text sections.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🛠 Tech Stack
+
+- **Framework:** [React](https://react.dev/)
+- **Build Tool:** [Vite](https://vitejs.dev/)
+- **3D Graphics:** [Three.js](https://threejs.org/) via [@react-three/fiber](https://docs.pmnd.rs/react-three-fiber) & [@react-three/drei](https://github.com/pmndrs/drei)
+- **Animation:** [GSAP](https://gsap.com/) & ScrollTrigger
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **Icons & Assets:** Lucide React
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (`v18.0.0` or higher)
+- Package manager: `npm`, `pnpm`, or `yarn`
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/ilyajavadeveloper/macbook_apple-app.git](https://github.com/ilyajavadeveloper/macbook_apple-app.git)
+   cd macbook_apple-app
