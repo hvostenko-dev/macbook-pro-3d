@@ -1,15 +1,14 @@
-
-import React, {useEffect} from 'react'
-import {useGLTF, useVideoTexture} from '@react-three/drei'
+import { useEffect } from "react";
+import { useGLTF, useVideoTexture } from "@react-three/drei";
 import useMacbookStore from "../../store/index.js";
-import {noChangeParts} from "../../constants/index.js";
-import {Color} from "three";
+import { noChangeParts } from "../../constants/index.js";
+import { Color } from "three";
 
 export default function MacbookModel(props) {
-    const { color, texture, } = useMacbookStore();
-    const { nodes, materials, scene} = useGLTF('/models/macbook-transformed.glb')
+    const { color, texture } = useMacbookStore();
+    const { nodes, materials, scene } = useGLTF("/models/macbook-transformed.glb");
 
-    const screen = useVideoTexture(texture)
+    const screen = useVideoTexture(texture);
 
     useEffect(() => {
         scene.traverse((child) => {
@@ -45,7 +44,7 @@ export default function MacbookModel(props) {
             </mesh>
             <mesh geometry={nodes.Object_127.geometry} material={materials.ZCDwChwkbBfITSW} rotation={[Math.PI / 2, 0, 0]} />
         </group>
-    )
+    );
 }
 
-useGLTF.preload('/models/macbook-transformed.glb')
+useGLTF.preload("/models/macbook-transformed.glb");

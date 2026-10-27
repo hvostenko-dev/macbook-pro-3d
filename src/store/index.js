@@ -10,7 +10,21 @@ const useMacbookStore = create((set) => ({
     texture: '/videos/feature-1.mp4',
     setTexture: (texture) => set({ texture }),
 
-    reset: () => set({ color: '#2e2c2e', scale: 0.08, texture: '/videos/feature-1.mp4' }),
-}))
+    activeFeature: 1,
+    setActiveFeature: (activeFeature) => set({ activeFeature }),
+
+    isBuyModalOpen: false,
+    setBuyModalOpen: (isBuyModalOpen) => set({ isBuyModalOpen }),
+
+    selectedChip: 'm4-pro',
+    setSelectedChip: (selectedChip) => set({ selectedChip }),
+
+    reset: () => set({
+        color: '#2e2c2e',
+        scale: 0.08,
+        texture: '/videos/feature-1.mp4',
+        activeFeature: 1,
+    }),
+}));
 
 export default useMacbookStore;
