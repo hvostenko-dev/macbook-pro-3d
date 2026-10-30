@@ -28,13 +28,13 @@ const noChangeParts = [
 ];
 
 const performanceImages = [
-    { id: "p1", src: "/performance1.png", alt: "Pro workflow rendering on MacBook Pro" },
-    { id: "p2", src: "/performance2.png", alt: "High-frame-rate gaming on Liquid Retina XDR" },
-    { id: "p3", src: "/performance3.png", alt: "3D modeling and CAD performance" },
-    { id: "p4", src: "/performance4.png", alt: "Multi-stream 8K video editing" },
-    { id: "p5", src: "/performance5.jpg", alt: "MacBook Pro M4 centerpiece" },
-    { id: "p6", src: "/performance6.png", alt: "Audio production with hundreds of tracks" },
-    { id: "p7", src: "/performance7.png", alt: "Machine learning and code compilation" },
+    { id: "p1", src: "/performance1.webp", alt: "Pro workflow rendering on MacBook Pro" },
+    { id: "p2", src: "/performance2.webp", alt: "High-frame-rate gaming on Liquid Retina XDR" },
+    { id: "p3", src: "/performance3.webp", alt: "3D modeling and CAD performance" },
+    { id: "p4", src: "/performance4.webp", alt: "Multi-stream 8K video editing" },
+    { id: "p5", src: "/performance5.webp", alt: "MacBook Pro M4 centerpiece" },
+    { id: "p6", src: "/performance6.webp", alt: "Audio production with hundreds of tracks" },
+    { id: "p7", src: "/performance7.webp", alt: "Machine learning and code compilation" },
 ];
 
 const performanceImgPositions = [

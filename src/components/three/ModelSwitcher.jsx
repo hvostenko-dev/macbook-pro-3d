@@ -1,79 +1,100 @@
-import { useRef } from "react";
-import { PresentationControls } from "@react-three/drei";
+import { useRef, useEffect } from "react";
+import { PresentationControls, useGLTF, useTexture } from "@react-three/drei";
+import useMacbookStore from "../../store";
+import { noChangeParts } from "../../constants/index.js";
+import * as THREE from "three";
 import gsap from "gsap";
-
-import MacbookModel16 from "../models/Macbook-16.jsx";
-import MacbookModel14 from "../models/Macbook-14.jsx";
 import { useGSAP } from "@gsap/react";
 
-const ANIMATION_DURATION = 1;
-const OFFSET_DISTANCE = 5;
-
-const fadeMeshes = (group, opacity) => {
-    if (!group) return;
-
-    group.traverse((child) => {
-        if (child.isMesh) {
-            child.material.transparent = true;
-            gsap.to(child.material, { opacity, duration: ANIMATION_DURATION });
-        }
+function ProductMacbookModel() {
+    const { color } = useMacbookStore();
+    const { nodes, materials, scene } = useGLTF("/models/macbook-transformed.glb");
+    const screenTexture = useTexture("/screen.webp", (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.needsUpdate = true;
     });
-};
 
-const moveGroup = (group, x) => {
-    if (!group) return;
+    useEffect(() => {
+        const targetColor = new THREE.Color(color);
+        scene.traverse((child) => {
+            if (child.isMesh && !noChangeParts.includes(child.name) && child.name !== "Object_123") {
+                if (child.material?.color) {
+                    gsap.to(child.material.color, {
+                        r: targetColor.r,
+                        g: targetColor.g,
+                        b: targetColor.b,
+                        duration: 0.35,
+                        ease: "power2.out",
+                    });
+                }
+            }
+        });
+    }, [color, scene]);
 
-    gsap.to(group.position, { x, duration: ANIMATION_DURATION });
-};
+    return (
+        <group dispose={null}>
+            <mesh geometry={nodes.Object_10.geometry} material={materials.PaletteMaterial001} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_16.geometry} material={materials.zhGRTuGrQoJflBD} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_20.geometry} material={materials.PaletteMaterial002} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_22.geometry} material={materials.lmWQsEjxpsebDlK} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_30.geometry} material={materials.LtEafgAVRolQqRw} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_32.geometry} material={materials.iyDJFXmHelnMTbD} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_34.geometry} material={materials.eJObPwhgFzvfaoZ} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_38.geometry} material={materials.nDsMUuDKliqGFdU} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_42.geometry} material={materials.CRQixVLpahJzhJc} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_48.geometry} material={materials.YYwBgwvcyZVOOAA} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_54.geometry} material={materials.SLGkCohDDelqXBu} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_58.geometry} material={materials.WnHKXHhScfUbJQi} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_66.geometry} material={materials.fNHiBfcxHUJCahl} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_74.geometry} material={materials.LpqXZqhaGCeSzdu} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_82.geometry} material={materials.gMtYExgrEUqPfln} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_96.geometry} material={materials.PaletteMaterial003} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_107.geometry} material={materials.JvMFZolVCdpPqjj} rotation={[Math.PI / 2, 0, 0]} />
+            <mesh geometry={nodes.Object_123.geometry} rotation={[Math.PI / 2, 0, 0]}>
+                <meshBasicMaterial map={screenTexture} />
+            </mesh>
+            <mesh geometry={nodes.Object_127.geometry} material={materials.ZCDwChwkbBfITSW} rotation={[Math.PI / 2, 0, 0]} />
+        </group>
+    );
+}
 
-const ModelSwitcher = ({ scale, isMobile }) => {
-    const SCALE_LARGE_DESKTOP = 0.08;
-    const SCALE_LARGE_MOBILE = 0.05;
+const ModelSwitcher = ({ scale }) => {
+    const groupRef = useRef(null);
 
-    const smallMacbookRef = useRef();
-    const largeMacbookRef = useRef();
-
-    const showLargeMacbook = scale === SCALE_LARGE_DESKTOP || scale === SCALE_LARGE_MOBILE;
-
+    // Smoothly animate scale transition between 14" and 16"
     useGSAP(() => {
-        if (showLargeMacbook) {
-            moveGroup(smallMacbookRef.current, -OFFSET_DISTANCE);
-            moveGroup(largeMacbookRef.current, 0);
-
-            fadeMeshes(smallMacbookRef.current, 0);
-            fadeMeshes(largeMacbookRef.current, 1);
-        } else {
-            moveGroup(smallMacbookRef.current, 0);
-            moveGroup(largeMacbookRef.current, OFFSET_DISTANCE);
-
-            fadeMeshes(smallMacbookRef.current, 1);
-            fadeMeshes(largeMacbookRef.current, 0);
+        if (groupRef.current) {
+            gsap.to(groupRef.current.scale, {
+                x: scale,
+                y: scale,
+                z: scale,
+                duration: 0.55,
+                ease: "power2.out",
+            });
         }
     }, [scale]);
 
     const controlsConfig = {
+        global: false,
+        cursor: true,
         snap: true,
-        speed: 1.2,
+        speed: 1.3,
         zoom: 1,
+        polar: [-Math.PI / 5, Math.PI / 4],
         azimuth: [-Infinity, Infinity],
-        config: { mass: 1, tension: 0, friction: 26 },
+        config: { mass: 1, tension: 170, friction: 26 },
     };
 
     return (
-        <>
-            <PresentationControls {...controlsConfig}>
-                <group ref={largeMacbookRef}>
-                    <MacbookModel16 scale={isMobile ? 0.05 : 0.08} />
-                </group>
-            </PresentationControls>
-
-            <PresentationControls {...controlsConfig}>
-                <group ref={smallMacbookRef}>
-                    <MacbookModel14 scale={isMobile ? 0.035 : 0.06} />
-                </group>
-            </PresentationControls>
-        </>
+        <PresentationControls {...controlsConfig}>
+            <group ref={groupRef} scale={scale} position={[0, -0.6, 0]}>
+                <ProductMacbookModel />
+            </group>
+        </PresentationControls>
     );
 };
 
 export default ModelSwitcher;
+
+useGLTF.preload("/models/macbook-transformed.glb");
+useTexture.preload("/screen.webp");

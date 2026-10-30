@@ -108,7 +108,7 @@ const Performance = () => {
                 {/* Main Hero Image p5 */}
                 <div className="mobile-perf-card relative rounded-2xl overflow-hidden border border-white/10 mb-4 shadow-2xl">
                     <img
-                        src="/performance5.jpg"
+                        src="/performance5.webp"
                         alt="MacBook Pro Gaming & Pro Workflows"
                         className="w-full h-56 sm:h-80 object-cover object-center"
                     />

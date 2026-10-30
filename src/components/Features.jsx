@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import StudioLights from "./three/StudioLights.jsx";
-import { features, featureSequence } from "../constants/index.js";
+import { features } from "../constants/index.js";
 import clsx from "clsx";
 import { Suspense, useEffect, useRef } from "react";
 import { Html } from "@react-three/drei";
@@ -9,26 +9,12 @@ import { useMediaQuery } from "react-responsive";
 import useMacbookStore from "../store/index.js";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
+import useInView from "../hooks/useInView.js";
 
 const ModelScroll = () => {
     const groupRef = useRef(null);
     const isMobile = useMediaQuery({ query: "(max-width: 1024px)" });
-    const { setTexture, setActiveFeature } = useMacbookStore();
-
-    // Pre-load all feature videos during component mount
-    useEffect(() => {
-        featureSequence.forEach((feature) => {
-            const v = document.createElement("video");
-            Object.assign(v, {
-                src: feature.videoPath,
-                muted: true,
-                playsInline: true,
-                preload: "auto",
-                crossOrigin: "anonymous",
-            });
-            v.load();
-        });
-    }, []);
+    const { setTexture, setActiveFeature, activeFeature } = useMacbookStore();
 
     useGSAP(() => {
         if (isMobile) return;
@@ -94,7 +80,6 @@ const ModelScroll = () => {
     }, [isMobile]);
 
     // Gentle rotation when user selects a feature on mobile
-    const { activeFeature } = useMacbookStore();
     useEffect(() => {
         if (isMobile && groupRef.current) {
             gsap.to(groupRef.current.rotation, {
@@ -125,6 +110,23 @@ const ModelScroll = () => {
 const Features = () => {
     const isMobile = useMediaQuery({ query: "(max-width: 1024px)" });
     const { activeFeature, setActiveFeature, setTexture } = useMacbookStore();
+    const [sectionRef, isInView] = useInView({ rootMargin: "350px" });
+
+    // Lazy-load other feature videos only when Features enters view
+    useEffect(() => {
+        if (!isInView) return;
+
+        features.forEach((feature) => {
+            const v = document.createElement("video");
+            Object.assign(v, {
+                src: feature.videoPath,
+                muted: true,
+                playsInline: true,
+                preload: "metadata",
+                crossOrigin: "anonymous",
+            });
+        });
+    }, [isInView]);
 
     const handleSelectFeature = (feature) => {
         setActiveFeature(feature.id);
@@ -134,7 +136,7 @@ const Features = () => {
     const currentFeature = features.find((f) => f.id === activeFeature) || features[0];
 
     return (
-        <section id="features" className="pt-24 lg:pt-40 relative">
+        <section id="features" ref={sectionRef} className="pt-24 lg:pt-40 relative">
             <div className="px-4 text-center mb-6 lg:mb-0">
                 <p className="text-xs sm:text-sm uppercase tracking-widest text-primary font-semibold mb-2">
                     Apple Intelligence
@@ -150,7 +152,13 @@ const Features = () => {
                         isMobile ? "!h-[44vh] sm:!h-[52vh]" : "!h-dvh"
                     )}
                     camera={{ position: [0, 0, 5], fov: isMobile ? 45 : 50 }}
-                    dpr={[1, 2]}
+                    dpr={[1, 1.5]}
+                    frameloop={isInView ? "always" : "never"}
+                    gl={{
+                        powerPreference: "high-performance",
+                        antialias: true,
+                        alpha: true,
+                    }}
                 >
                     <StudioLights />
                     <ambientLight intensity={0.5} />

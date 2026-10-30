@@ -1,9 +1,9 @@
-import {Environment, Lightformer} from "@react-three/drei";
+import { Environment, Lightformer } from "@react-three/drei";
 
 const StudioLights = () => {
     return (
         <group name="lights">
-            <Environment resolution={256}>
+            <Environment resolution={256} frames={1}>
                 <group>
                     <Lightformer
                         form="rect"
@@ -40,6 +40,7 @@ const StudioLights = () => {
                 intensity={Math.PI * 1}
             />
         </group>
-    )
-}
-export default StudioLights
+    );
+};
+
+export default StudioLights;

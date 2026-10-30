@@ -1,9 +1,29 @@
+import { useEffect, useRef } from "react";
 import { useMediaQuery } from "react-responsive";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
+import useInView from "../hooks/useInView.js";
 
 const Showcase = () => {
     const isTablet = useMediaQuery({ query: "(max-width: 1024px)" });
+    const videoRef = useRef(null);
+    const [sectionRef, isInView] = useInView({ rootMargin: "400px" });
+
+    // Lazy load the heavy 13.5MB video only when approaching viewport
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        if (isInView) {
+            if (!video.src || !video.src.includes("game.mp4")) {
+                video.src = "/videos/game.mp4";
+                video.load();
+            }
+            video.play().catch(() => {});
+        } else {
+            video.pause();
+        }
+    }, [isInView]);
 
     useGSAP(() => {
         if (!isTablet) {
@@ -41,14 +61,14 @@ const Showcase = () => {
     }, [isTablet]);
 
     return (
-        <section id="showcase" className="mt-16 lg:mt-0">
+        <section id="showcase" ref={sectionRef} className="mt-16 lg:mt-0">
             <div className="media relative overflow-hidden max-lg:rounded-3xl max-lg:mx-4 max-lg:border max-lg:border-white/10">
                 <video
-                    src="/videos/game.mp4"
+                    ref={videoRef}
                     loop
                     muted
-                    autoPlay
                     playsInline
+                    preload="none"
                     className="w-full h-[38vh] sm:h-[50vh] lg:h-auto object-cover object-center"
                 />
                 <div className="mask flex items-center justify-center">

@@ -54,7 +54,7 @@ const Hero = () => {
                 </h1>
 
                 <img
-                    src="/title.png"
+                    src="/title.webp"
                     alt="Built for Apple Intelligence"
                     className="
                         mx-auto block h-auto

@@ -10,11 +10,25 @@ An interactive, high-fidelity Apple MacBook Pro product experience powered by **
 
 ---
 
+## ⚡ 3D & Performance Optimization Highlights
+
+- **Unified 3D GLTF Pipeline**: Replaced duplicated multi-model loads with a single Draco-compressed GLB (`macbook-transformed.glb`) shared across both Canvases, eliminating redundant Draco decodes and cutting 3D draw calls in half.
+- **Single PresentationControls & Smooth Scaling**: Removed conflicting duplicate PresentationControls; switching between 14-inch and 16-inch now performs a fluid GSAP matrix scale animation with zero model reload or pointer drag conflicts.
+- **Seamless Non-Suspending Video Textures**: Completely eliminated React Suspense unmounts during scroll. Video switching updates the underlying HTML5 video source inside a persistent `THREE.VideoTexture` with `generateMipmaps: false`, providing buttery-smooth 60/120 FPS playback.
+- **Viewport-Aware WebGL Rendering**: Integrated IntersectionObserver hooks (`useInView`) that pause off-screen canvas loops (`frameloop="never"`), saving 100% idle GPU/CPU cycles and battery life.
+- **WebP Texture & Asset Compression**:
+  - Screen texture reduced from **2,385 KB** PNG down to **27 KB** WebP (**87x size reduction**).
+  - Performance images reduced from **3.2 MB** down to **~340 KB** total (**90% reduction**).
+- **Deferred Media Streaming**: Heavy 13.5MB showcase video and auxiliary feature clips are streamed lazily only when entering the viewport, freeing up maximum initial bandwidth for instant 3D model availability.
+- **Vite 8 & Rolldown Code-Splitting**: Vendor chunking separates `@react-three`/Three.js, GSAP, and React/Zustand into parallel, long-term cacheable bundles.
+
+---
+
 ## 🎯 Key Features
 
 - **Interactive 3D MacBook Studio (`ProductViewer`)**:
   - Real-time 360° inspection using `@react-three/drei` `PresentationControls` with spring-physics snapping.
-  - Seamless GSAP-animated switching between **14-inch** and **16-inch** GLTF models and dynamic chassis finish customization (**Space Black** & **Silver**).
+  - Seamless GSAP-animated switching between **14-inch** and **16-inch** display sizes and dynamic chassis finish customization (**Space Black** & **Silver**).
 - **Scroll-Driven 3D Storytelling & Live Video Textures (`Features` & `Showcase`)**:
   - Pinned scroll timelines using **GSAP ScrollTrigger** that rotate the 3D MacBook Pro and dynamically project HTML5 video textures onto the 3D laptop screen.
   - **Mobile-First Interactive Mode**: Touch-friendly feature selector cards on smartphones and tablets that smoothly rotate the 3D model and swap live video feeds without trapping mobile scroll.
@@ -50,8 +64,8 @@ An interactive, high-fidelity Apple MacBook Pro product experience powered by **
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/ilyajavadeveloper/macbook_apple-app.git
-cd macbook_apple-app
+git clone https://github.com/hvostenko-dev/macbook-pro-3d.git
+cd macbook-pro-3d
 
 # 2. Install dependencies
 npm install
