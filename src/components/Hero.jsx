@@ -1,26 +1,29 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import useMacbookStore from "../store";
-import useInView from "../hooks/useInView.js";
 import { playAppleStartupChime } from "../utils/audio.js";
 import clsx from "clsx";
 
 const Hero = () => {
     const videoRef = useRef(null);
-    const [sectionRef, isInView] = useInView({ rootMargin: "150px" });
     const { color, setColor, setBuyModalOpen } = useMacbookStore();
 
     const [isOpened, setIsOpened] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
     const [soundEnabled, setSoundEnabled] = useState(false);
     const [isReplaying, setIsReplaying] = useState(false);
 
-    // Optimized playback speed (1.65x instead of 2x for smooth 60fps hardware decode without frame drops)
-    const PLAYBACK_RATE = 1.65;
+    // Optimized playback speed for natural, cinematic 60fps opening
+    const PLAYBACK_RATE = 1.6;
 
-    // Helper to safely play video with hardware acceleration and autoplay compliance
+    // Helper to safely play video
     const playVideo = useCallback(() => {
         const video = videoRef.current;
-        if (!video || video.ended) return;
+        if (!video) return;
+
+        // If already at or near the end, mark as opened and do not restart
+        if (video.ended || (video.duration && video.currentTime >= video.duration - 0.1)) {
+            setIsOpened(true);
+            return;
+        }
 
         video.muted = true;
         video.defaultMuted = true;
@@ -29,18 +32,14 @@ const Hero = () => {
         try {
             video.playbackRate = PLAYBACK_RATE;
         } catch {
-            // Media element might not be fully initialized
+            // Media element might not be ready
         }
 
         const playPromise = video.play();
         if (playPromise !== undefined) {
-            playPromise
-                .then(() => {
-                    setIsPlaying(true);
-                })
-                .catch(() => {
-                    setIsPlaying(false);
-                });
+            playPromise.catch(() => {
+                // Autoplay was blocked; fallback user gesture listeners will trigger it
+            });
         }
     }, [PLAYBACK_RATE]);
 
@@ -49,30 +48,62 @@ const Hero = () => {
         const video = videoRef.current;
         if (!video) return;
 
+        let isCancelled = false;
+        let blobUrlToRevoke = null;
+
+        // Ensure flags are set immediately at DOM level
         video.muted = true;
         video.defaultMuted = true;
         video.playsInline = true;
 
-        const setPlaybackSpeed = () => {
+        const applySpeed = () => {
             try {
                 video.playbackRate = PLAYBACK_RATE;
             } catch {
-                // Ignore if media element is not ready
+                // Ignore if not ready
             }
         };
 
-        setPlaybackSpeed();
+        applySpeed();
         playVideo();
 
+        // Preload video into memory blob to eliminate HTTP range chunk starvation
+        fetch("/videos/hero.mp4")
+            .then((res) => {
+                if (!res.ok) throw new Error("Fetch failed");
+                return res.blob();
+            })
+            .then((blob) => {
+                if (isCancelled || !videoRef.current) return;
+                blobUrlToRevoke = URL.createObjectURL(blob);
+                const currentVideo = videoRef.current;
+                const prevTime = currentVideo.currentTime;
+                const wasEnded = currentVideo.ended || (currentVideo.duration && prevTime >= currentVideo.duration - 0.1);
+
+                if (wasEnded) {
+                    setIsOpened(true);
+                    return;
+                }
+
+                currentVideo.src = blobUrlToRevoke;
+                currentVideo.currentTime = prevTime;
+                applySpeed();
+                currentVideo.play().catch(() => {});
+            })
+            .catch(() => {
+                // Use standard src on fetch failure
+            });
+
+        // Event listeners
         const handleLoadedMetadata = () => {
-            setPlaybackSpeed();
+            applySpeed();
             if (!video.ended && video.paused) {
                 playVideo();
             }
         };
 
         const handleCanPlay = () => {
-            setPlaybackSpeed();
+            applySpeed();
             if (!video.ended && video.paused) {
                 playVideo();
             }
@@ -80,59 +111,71 @@ const Hero = () => {
 
         const handleEnded = () => {
             setIsOpened(true);
-            setIsPlaying(false);
             setIsReplaying(false);
         };
 
-        const handlePlaying = () => {
-            setIsPlaying(true);
-        };
-
-        let resumeTimer;
+        // Resume if stalled, buffered or momentarily paused before end
+        let resumeTimer = null;
         const handlePause = () => {
-            setIsPlaying(false);
-            if (!video.ended && document.visibilityState === "visible") {
+            if (isCancelled) return;
+            const isNearEnd = video.duration && video.currentTime >= video.duration - 0.1;
+            if (video.ended || isNearEnd) {
+                setIsOpened(true);
+                setIsReplaying(false);
+                return;
+            }
+
+            if (document.visibilityState === "visible") {
                 clearTimeout(resumeTimer);
                 resumeTimer = setTimeout(() => {
                     if (video && !video.ended && video.paused && document.visibilityState === "visible") {
                         playVideo();
                     }
-                }, 80);
+                }, 60);
             }
         };
 
+        // Tab visibility restoration
         const handleVisibilityChange = () => {
             if (document.visibilityState === "visible" && !video.ended && video.paused) {
                 playVideo();
             }
         };
 
+        // User gesture fallback in case autoplay was blocked by browser policy
         const handleUserGesture = () => {
             if (!video.ended && video.paused) {
                 playVideo();
             }
         };
 
-        // Watchdog fail-safe to ensure lid never stays halfway open
+        // Fallback watchdog: if video is paused before reaching the end, resume it;
+        // if after 4 seconds it still hasn't completed, smoothly seek to open position.
         const watchdogTimer = setTimeout(() => {
-            if (video && !video.ended) {
-                if (video.paused) {
-                    playVideo();
-                }
-                setTimeout(() => {
-                    if (video && !video.ended && video.paused) {
-                        video.currentTime = video.duration || 5;
-                        setIsOpened(true);
-                    }
-                }, 1200);
+            if (!video || isCancelled) return;
+            const isNearEnd = video.duration && video.currentTime >= video.duration - 0.1;
+            if (video.ended || isNearEnd) {
+                setIsOpened(true);
+                return;
             }
-        }, 4000);
+
+            if (video.paused) {
+                playVideo();
+            }
+
+            // Second stage fail-safe: guarantee laptop is never left half-open
+            setTimeout(() => {
+                if (video && !video.ended && (video.paused || video.currentTime < (video.duration || 5) - 0.2)) {
+                    video.currentTime = (video.duration || 5) - 0.05;
+                    setIsOpened(true);
+                }
+            }, 1500);
+        }, 3200);
 
         video.addEventListener("loadedmetadata", handleLoadedMetadata);
         video.addEventListener("canplay", handleCanPlay);
         video.addEventListener("canplaythrough", handleCanPlay);
         video.addEventListener("ended", handleEnded);
-        video.addEventListener("playing", handlePlaying);
         video.addEventListener("pause", handlePause);
         document.addEventListener("visibilitychange", handleVisibilityChange);
 
@@ -142,13 +185,16 @@ const Hero = () => {
         window.addEventListener("keydown", handleUserGesture, { once: true, passive: true });
 
         return () => {
+            isCancelled = true;
             clearTimeout(resumeTimer);
             clearTimeout(watchdogTimer);
+            if (blobUrlToRevoke) {
+                URL.revokeObjectURL(blobUrlToRevoke);
+            }
             video.removeEventListener("loadedmetadata", handleLoadedMetadata);
             video.removeEventListener("canplay", handleCanPlay);
             video.removeEventListener("canplaythrough", handleCanPlay);
             video.removeEventListener("ended", handleEnded);
-            video.removeEventListener("playing", handlePlaying);
             video.removeEventListener("pause", handlePause);
             document.removeEventListener("visibilitychange", handleVisibilityChange);
             window.removeEventListener("pointerdown", handleUserGesture);
@@ -157,16 +203,6 @@ const Hero = () => {
             window.removeEventListener("keydown", handleUserGesture);
         };
     }, [playVideo, PLAYBACK_RATE]);
-
-    // Resume when scrolling back into Hero viewport
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        if (isInView && !video.ended && video.paused) {
-            playVideo();
-        }
-    }, [isInView, playVideo]);
 
     // Handle replay with optional sound
     const handleReplay = useCallback(() => {
@@ -210,7 +246,6 @@ const Hero = () => {
     return (
         <section
             id="hero"
-            ref={sectionRef}
             className="
                 relative flex min-h-[100svh] w-full flex-col items-center justify-between
                 overflow-x-clip px-4 pb-8 pt-24 text-center
@@ -281,7 +316,14 @@ const Hero = () => {
                     style={{ transform: "translate3d(0, 0, 0)", willChange: "transform" }}
                 >
                     <video
-                        ref={videoRef}
+                        ref={(el) => {
+                            if (el) {
+                                el.muted = true;
+                                el.defaultMuted = true;
+                                el.playsInline = true;
+                                videoRef.current = el;
+                            }
+                        }}
                         src="/videos/hero.mp4"
                         autoPlay
                         muted
@@ -393,7 +435,7 @@ const Hero = () => {
                         <span
                             className={clsx(
                                 "w-1.5 h-1.5 rounded-full transition-colors duration-300",
-                                isOpened ? "bg-emerald-400" : isPlaying ? "bg-blue-400 animate-ping" : "bg-zinc-500"
+                                isOpened ? "bg-emerald-400" : "bg-blue-400 animate-ping"
                             )}
                         />
                         <span>{isOpened ? "Liquid Retina XDR Active" : "Opening..."}</span>
