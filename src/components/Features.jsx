@@ -17,55 +17,61 @@ const ModelScroll = () => {
     const { setTexture, setActiveFeature, activeFeature } = useMacbookStore();
 
     useGSAP(() => {
-        if (isMobile) return;
+        if (isMobile || !groupRef.current) return;
+
+        // Establish initial 3D transform once in Three.js coordinates
+        // (starts higher up to glide gracefully through the feature callouts)
+        groupRef.current.position.set(0, 0.9, 0);
+        groupRef.current.rotation.set(0, 0, 0);
 
         // 3D MODEL ROTATION & SMOOTH DESCENT ANIMATION (Desktop)
         const modelTimeline = gsap.timeline({
             scrollTrigger: {
                 trigger: "#f-canvas",
                 start: "top top",
-                end: "bottom top",
-                scrub: 1,
+                end: "+=180%",
+                scrub: 1.2,
                 pin: true,
+                anticipatePin: 1,
             },
         });
 
-        // SYNC THE FEATURE CONTENT (Desktop)
+        // SYNC THE FEATURE CONTENT & CALLOUTS (Desktop)
         const timeline = gsap.timeline({
             scrollTrigger: {
                 trigger: "#f-canvas",
-                start: "top center",
-                end: "bottom top",
-                scrub: 1,
+                start: "top top",
+                end: "+=180%",
+                scrub: 1.2,
             },
         });
 
-        if (groupRef.current) {
-            modelTimeline
-                .to(
-                    groupRef.current.rotation,
-                    {
-                        y: Math.PI * 2,
-                        ease: "power1.inOut",
-                    },
-                    0
-                )
-                .to(
-                    groupRef.current.position,
-                    {
-                        y: -1.3,
-                        ease: "power1.inOut",
-                    },
-                    0
-                );
-        }
+        // Smooth rotation 360° + full vertical descent through the callouts
+        modelTimeline
+            .to(
+                groupRef.current.rotation,
+                {
+                    y: Math.PI * 2,
+                    ease: "power1.inOut",
+                },
+                0
+            )
+            .to(
+                groupRef.current.position,
+                {
+                    y: -1.4,
+                    ease: "power1.inOut",
+                },
+                0
+            );
 
+        // Content & Texture Sync along the descent
         timeline
             .call(() => {
                 setTexture("/videos/feature-1.mp4");
                 setActiveFeature(1);
             })
-            .to(".box1", { opacity: 1, y: 0, delay: 0.4 })
+            .to(".box1", { opacity: 1, y: 0, delay: 0.1 })
 
             .call(() => {
                 setTexture("/videos/feature-2.mp4");
@@ -92,9 +98,11 @@ const ModelScroll = () => {
             .to(".box5", { opacity: 1, y: 0 });
     }, [isMobile]);
 
-    // Gentle rotation when user selects a feature on mobile
+    // Set initial position on mobile and handle tab rotation
     useEffect(() => {
-        if (isMobile && groupRef.current) {
+        if (!groupRef.current) return;
+        if (isMobile) {
+            groupRef.current.position.set(0, -0.6, 0);
             gsap.to(groupRef.current.rotation, {
                 y: ((activeFeature - 1) * Math.PI) / 6 - 0.25,
                 duration: 0.8,
@@ -104,7 +112,7 @@ const ModelScroll = () => {
     }, [activeFeature, isMobile]);
 
     return (
-        <group ref={groupRef} position={[0, isMobile ? -0.8 : 0.2, 0]}>
+        <group ref={groupRef}>
             <Suspense
                 fallback={
                     <Html center>
@@ -123,7 +131,7 @@ const ModelScroll = () => {
 const Features = () => {
     const isMobile = useMediaQuery({ query: "(max-width: 1024px)" });
     const { activeFeature, setActiveFeature, setTexture } = useMacbookStore();
-    const [sectionRef, isInView] = useInView({ rootMargin: "350px" });
+    const [sectionRef, isInView] = useInView({ rootMargin: "600px" });
 
     // Lazy-load other feature videos only when Features enters view
     useEffect(() => {
