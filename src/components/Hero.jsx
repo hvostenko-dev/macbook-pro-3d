@@ -5,23 +5,20 @@ import clsx from "clsx";
 
 const Hero = () => {
     const videoRef = useRef(null);
+    const safetyTimerRef = useRef(null);
     const { color, setColor, setBuyModalOpen } = useMacbookStore();
 
     const [isOpened, setIsOpened] = useState(false);
     const [soundEnabled, setSoundEnabled] = useState(false);
     const [isReplaying, setIsReplaying] = useState(false);
 
-    const PLAYBACK_RATE = 1.75;
+    // Fast, responsive opening animation speed
+    const PLAYBACK_RATE = 1.6;
 
-    // Helper to safely play video
-    const playVideo = useCallback(() => {
+    // Helper to safely play video with current settings
+    const playSafe = useCallback(() => {
         const video = videoRef.current;
         if (!video) return;
-
-        if (video.ended || (video.duration && video.currentTime >= video.duration - 0.1)) {
-            setIsOpened(true);
-            return;
-        }
 
         video.muted = true;
         video.defaultMuted = true;
@@ -33,13 +30,65 @@ const Hero = () => {
             // Media element might not be ready yet
         }
 
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(() => {
+        const p = video.play();
+        if (p !== undefined) {
+            p.catch(() => {
                 // Autoplay blocked by browser policy; user interaction listener will trigger it
             });
         }
     }, [PLAYBACK_RATE]);
+
+    // Clear safety timer once playback successfully reaches end
+    const clearSafetyTimer = useCallback(() => {
+        if (safetyTimerRef.current) {
+            clearTimeout(safetyTimerRef.current);
+            safetyTimerRef.current = null;
+        }
+    }, []);
+
+    const resetSafetyTimer = useCallback((durationMs = 6000) => {
+        clearSafetyTimer();
+        safetyTimerRef.current = setTimeout(() => {
+            const video = videoRef.current;
+            if (video && !video.ended) {
+                if (video.paused) {
+                    playSafe();
+                }
+                if (video.duration && video.currentTime < video.duration - 0.2) {
+                    video.currentTime = Math.max(0, video.duration - 0.05);
+                    setIsOpened(true);
+                    setIsReplaying(false);
+                }
+            }
+        }, durationMs);
+    }, [clearSafetyTimer, playSafe]);
+
+    // Continuously monitor playback progress so isOpened reliably switches
+    // as soon as the lid is open, regardless of whether the browser drops the 'ended' event
+    const handleTimeUpdate = useCallback(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const duration = video.duration;
+        if (duration && (video.currentTime >= duration - 0.2 || video.ended)) {
+            setIsOpened(true);
+            setIsReplaying(false);
+            clearSafetyTimer();
+        }
+    }, [clearSafetyTimer]);
+
+    const handleEnded = useCallback(() => {
+        setIsOpened(true);
+        setIsReplaying(false);
+        clearSafetyTimer();
+    }, [clearSafetyTimer]);
+
+    const handleError = useCallback(() => {
+        // Fallback: if video fails to load, mark as opened so user isn't stuck
+        setIsOpened(true);
+        setIsReplaying(false);
+        clearSafetyTimer();
+    }, [clearSafetyTimer]);
 
     // Main playback controller effect
     useEffect(() => {
@@ -59,138 +108,128 @@ const Hero = () => {
         };
 
         applySpeed();
-        playVideo();
+        playSafe();
+        resetSafetyTimer(6000);
 
         const handleLoadedMetadata = () => {
             applySpeed();
             if (!video.ended && video.paused) {
-                playVideo();
+                playSafe();
             }
         };
 
         const handleCanPlay = () => {
             applySpeed();
             if (!video.ended && video.paused) {
-                playVideo();
+                playSafe();
             }
         };
 
-        const handleEnded = () => {
-            setIsOpened(true);
-            setIsReplaying(false);
+        const handlePlaying = () => {
+            applySpeed();
         };
-
-        // If the browser pauses before the lid is fully opened, resume playback
-        let resumeTimer = null;
-        const handlePause = () => {
-            const isNearEnd = video.duration && video.currentTime >= video.duration - 0.1;
-            if (video.ended || isNearEnd) {
-                setIsOpened(true);
-                setIsReplaying(false);
-                return;
-            }
-
-            if (document.visibilityState === "visible") {
-                clearTimeout(resumeTimer);
-                resumeTimer = setTimeout(() => {
-                    if (video && !video.ended && video.paused && document.visibilityState === "visible") {
-                        playVideo();
-                    }
-                }, 80);
-            }
-        };
-
-        // Resume when user returns to this tab
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === "visible" && !video.ended && video.paused) {
-                playVideo();
-            }
-        };
-
-        // Fallback for strict browser autoplay blocking
-        const handleUserGesture = () => {
-            if (!video.ended && video.paused) {
-                playVideo();
-            }
-        };
-
-        // Watchdog fail-safe to guarantee laptop never stays halfway open
-        const watchdogTimer = setTimeout(() => {
-            if (!video) return;
-            const isNearEnd = video.duration && video.currentTime >= video.duration - 0.1;
-            if (video.ended || isNearEnd) {
-                setIsOpened(true);
-                return;
-            }
-
-            if (video.paused) {
-                playVideo();
-            }
-
-            setTimeout(() => {
-                if (video && !video.ended && (video.paused || video.currentTime < (video.duration || 5) - 0.2)) {
-                    video.currentTime = (video.duration || 5) - 0.05;
-                    setIsOpened(true);
-                }
-            }, 1200);
-        }, 3200);
 
         video.addEventListener("loadedmetadata", handleLoadedMetadata);
         video.addEventListener("canplay", handleCanPlay);
-        video.addEventListener("canplaythrough", handleCanPlay);
-        video.addEventListener("ended", handleEnded);
-        video.addEventListener("pause", handlePause);
-        document.addEventListener("visibilitychange", handleVisibilityChange);
+        video.addEventListener("playing", handlePlaying);
 
-        window.addEventListener("pointerdown", handleUserGesture, { once: true, passive: true });
-        window.addEventListener("touchstart", handleUserGesture, { once: true, passive: true });
-        window.addEventListener("scroll", handleUserGesture, { once: true, passive: true });
+        // Resume when user returns to tab
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible" && video && !video.ended && video.paused) {
+                playSafe();
+            }
+        };
+
+        // User gesture fallback for strict mobile browser autoplay
+        const handleFirstInteraction = () => {
+            if (video && !video.ended && video.paused) {
+                playSafe();
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("pointerdown", handleFirstInteraction, { once: true, passive: true });
+        window.addEventListener("touchstart", handleFirstInteraction, { once: true, passive: true });
+        window.addEventListener("scroll", handleFirstInteraction, { once: true, passive: true });
 
         return () => {
-            clearTimeout(resumeTimer);
-            clearTimeout(watchdogTimer);
+            clearSafetyTimer();
             video.removeEventListener("loadedmetadata", handleLoadedMetadata);
             video.removeEventListener("canplay", handleCanPlay);
-            video.removeEventListener("canplaythrough", handleCanPlay);
-            video.removeEventListener("ended", handleEnded);
-            video.removeEventListener("pause", handlePause);
+            video.removeEventListener("playing", handlePlaying);
             document.removeEventListener("visibilitychange", handleVisibilityChange);
-            window.removeEventListener("pointerdown", handleUserGesture);
-            window.removeEventListener("touchstart", handleUserGesture);
-            window.removeEventListener("scroll", handleUserGesture);
+            window.removeEventListener("pointerdown", handleFirstInteraction);
+            window.removeEventListener("touchstart", handleFirstInteraction);
+            window.removeEventListener("scroll", handleFirstInteraction);
         };
-    }, [playVideo, PLAYBACK_RATE]);
+    }, [playSafe, PLAYBACK_RATE, resetSafetyTimer, clearSafetyTimer]);
 
-    // Handle replay with optional sound
+    // Handle replay with clean seeking, no race conditions, and optional Apple chime
     const handleReplay = useCallback(() => {
         const video = videoRef.current;
         if (!video) return;
 
         setIsReplaying(true);
         setIsOpened(false);
-        video.currentTime = 0;
+        resetSafetyTimer(6000);
 
         if (soundEnabled) {
             playAppleStartupChime();
         }
 
-        playVideo();
-    }, [playVideo, soundEnabled]);
+        // Clean pause before seeking to avoid Chromium abort race
+        video.pause();
+        video.currentTime = 0;
 
-    // Interactive laptop click
-    const handleVideoClick = () => {
+        const onSeeked = () => {
+            video.removeEventListener("seeked", onSeeked);
+            try {
+                video.playbackRate = PLAYBACK_RATE;
+            } catch {
+                // Ignore
+            }
+            const p = video.play();
+            if (p !== undefined) {
+                p.catch(() => {});
+            }
+        };
+
+        // If already at 0, play immediately; otherwise wait for clean seek
+        if (video.currentTime === 0 && video.readyState >= 2) {
+            try {
+                video.playbackRate = PLAYBACK_RATE;
+            } catch {
+                // Ignore
+            }
+            const p = video.play();
+            if (p !== undefined) {
+                p.catch(() => {});
+            }
+        } else {
+            video.addEventListener("seeked", onSeeked, { once: true });
+        }
+    }, [PLAYBACK_RATE, soundEnabled, resetSafetyTimer]);
+
+    // Interactive laptop click: if opened, replay; if paused/stalled, restart/play
+    const handleVideoClick = useCallback(() => {
         const video = videoRef.current;
         if (!video) return;
 
-        if (video.ended || isOpened) {
+        if (isOpened || video.ended) {
             handleReplay();
-        } else if (video.paused) {
+            return;
+        }
+
+        if (video.paused) {
             if (soundEnabled) {
                 playAppleStartupChime();
             }
-            playVideo();
+            playSafe();
+        } else {
+            // Already opening; clean restart
+            handleReplay();
         }
-    };
+    }, [isOpened, handleReplay, playSafe, soundEnabled]);
 
     const toggleSound = () => {
         const nextState = !soundEnabled;
@@ -273,19 +312,15 @@ const Hero = () => {
                     style={{ transform: "translate3d(0, 0, 0)", willChange: "transform" }}
                 >
                     <video
-                        ref={(el) => {
-                            if (el) {
-                                el.muted = true;
-                                el.defaultMuted = true;
-                                el.playsInline = true;
-                                videoRef.current = el;
-                            }
-                        }}
+                        ref={videoRef}
                         src="/videos/hero.mp4"
                         autoPlay
                         muted
                         playsInline
                         preload="auto"
+                        onTimeUpdate={handleTimeUpdate}
+                        onEnded={handleEnded}
+                        onError={handleError}
                         className="
                             relative block h-auto
                             w-[125vw] max-w-none
@@ -347,7 +382,7 @@ const Hero = () => {
                         onClick={toggleSound}
                         title={soundEnabled ? "Mute startup chime" : "Enable Apple startup chime sound"}
                         className={clsx(
-                            "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium backdrop-blur-xl transition cursor-pointer shadow-lg",
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium backdrop-blur-xl transition cursor-pointer shadow-lg active:scale-95",
                             soundEnabled
                                 ? "bg-primary/20 border-primary text-white"
                                 : "bg-zinc-900/80 border-white/10 text-zinc-400 hover:text-white"
@@ -379,7 +414,7 @@ const Hero = () => {
                         type="button"
                         onClick={handleReplay}
                         aria-label="Replay opening animation"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800/90 border border-white/10 text-xs font-medium text-zinc-300 hover:text-white backdrop-blur-xl transition cursor-pointer shadow-lg"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800/90 border border-white/10 text-xs font-medium text-zinc-300 hover:text-white backdrop-blur-xl transition cursor-pointer shadow-lg active:scale-95"
                     >
                         <span className={clsx("transition-transform duration-500", isReplaying && "rotate-180")}>
                             ↺
