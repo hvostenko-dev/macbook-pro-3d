@@ -56,7 +56,7 @@ const Performance = () => {
                 defaults: { duration: 2, ease: "power1.inOut", overwrite: "auto" },
                 scrollTrigger: {
                     trigger: sectionEl,
-                    start: "top bottom",
+                    start: "top 75%",
                     end: "bottom top",
                     scrub: 1,
                     invalidateOnRefresh: true,
@@ -82,7 +82,7 @@ const Performance = () => {
     );
 
     return (
-        <section id="performance" ref={sectionRef}>
+        <section id="performance" ref={sectionRef} className="relative z-10 bg-black pt-20 lg:pt-32">
             <div className="px-4 text-center">
                 <p className="text-xs sm:text-sm uppercase tracking-widest text-primary font-semibold mb-2">
                     Hardware-Accelerated Ray Tracing

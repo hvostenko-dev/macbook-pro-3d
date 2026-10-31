@@ -19,7 +19,7 @@ const ModelScroll = () => {
     useGSAP(() => {
         if (isMobile) return;
 
-        // 3D MODEL ROTATION ANIMATION (Desktop)
+        // 3D MODEL ROTATION & SMOOTH DESCENT ANIMATION (Desktop)
         const modelTimeline = gsap.timeline({
             scrollTrigger: {
                 trigger: "#f-canvas",
@@ -41,10 +41,23 @@ const ModelScroll = () => {
         });
 
         if (groupRef.current) {
-            modelTimeline.to(groupRef.current.rotation, {
-                y: Math.PI * 2,
-                ease: "power1.inOut",
-            });
+            modelTimeline
+                .to(
+                    groupRef.current.rotation,
+                    {
+                        y: Math.PI * 2,
+                        ease: "power1.inOut",
+                    },
+                    0
+                )
+                .to(
+                    groupRef.current.position,
+                    {
+                        y: -1.3,
+                        ease: "power1.inOut",
+                    },
+                    0
+                );
         }
 
         timeline
@@ -91,7 +104,7 @@ const ModelScroll = () => {
     }, [activeFeature, isMobile]);
 
     return (
-        <group ref={groupRef}>
+        <group ref={groupRef} position={[0, isMobile ? -0.8 : 0.2, 0]}>
             <Suspense
                 fallback={
                     <Html center>
@@ -101,7 +114,7 @@ const ModelScroll = () => {
                     </Html>
                 }
             >
-                <MacbookModel scale={isMobile ? 0.055 : 0.08} position={[0, -1, 0]} />
+                <MacbookModel scale={isMobile ? 0.055 : 0.08} position={[0, 0, 0]} />
             </Suspense>
         </group>
     );
@@ -110,7 +123,7 @@ const ModelScroll = () => {
 const Features = () => {
     const isMobile = useMediaQuery({ query: "(max-width: 1024px)" });
     const { activeFeature, setActiveFeature, setTexture } = useMacbookStore();
-    const [sectionRef, isInView] = useInView({ rootMargin: "80px" });
+    const [sectionRef, isInView] = useInView({ rootMargin: "350px" });
 
     // Lazy-load other feature videos only when Features enters view
     useEffect(() => {
