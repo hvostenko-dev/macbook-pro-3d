@@ -109,6 +109,14 @@ body {
 }
 
 @layer components {
+    #performance,
+    #features,
+    #highlights,
+    #compare {
+        content-visibility: auto;
+        contain-intrinsic-size: 1px 900px;
+    }
+
     #showcase {
         @apply relative;
 

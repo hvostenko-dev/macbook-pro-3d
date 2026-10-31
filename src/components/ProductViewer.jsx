@@ -22,7 +22,7 @@ const CanvasLoader = () => (
 const ProductViewer = () => {
     const { color, scale, setColor, setScale } = useMacbookStore();
     const isMobile = useMediaQuery({ query: "(max-width: 1024px)" });
-    const [sectionRef, isInView] = useInView({ rootMargin: "300px" });
+    const [sectionRef, isInView] = useInView({ rootMargin: "0px" });
 
     const colorLabel = color === "#2e2c2e" ? "Space Black" : "Silver";
     const sizeLabel = scale === 0.08 ? '16"' : '14"';

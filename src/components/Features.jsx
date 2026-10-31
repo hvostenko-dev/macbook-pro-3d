@@ -110,7 +110,7 @@ const ModelScroll = () => {
 const Features = () => {
     const isMobile = useMediaQuery({ query: "(max-width: 1024px)" });
     const { activeFeature, setActiveFeature, setTexture } = useMacbookStore();
-    const [sectionRef, isInView] = useInView({ rootMargin: "350px" });
+    const [sectionRef, isInView] = useInView({ rootMargin: "80px" });
 
     // Lazy-load other feature videos only when Features enters view
     useEffect(() => {
